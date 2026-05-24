@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OsteoRisk — Riesgo de fractura por fragilidad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --purple: #534AB7;
+      --purple-light: #EEEDFE;
+      --purple-mid: #AFA9EC;
+      --purple-dark: #3C3489;
+      --text: #1a1a2e;
+      --text-sec: #5a5a7a;
+      --text-hint: #9898b8;
+      --bg: #f4f3fb;
+      --bg-card: #ffffff;
+      --border: rgba(83,74,183,0.12);
+      --border-strong: rgba(83,74,183,0.25);
+      --green-bg: #EAF3DE; --green-text: #3B6D11;
+      --amber-bg: #FAEEDA; --amber-text: #854F0B;
+      --red-bg: #FCEBEB; --red-text: #A32D2D;
+      --redark-bg: #F7C1C1; --redark-text: #501313;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 2px 16px rgba(83,74,183,0.08);
+      --shadow-md: 0 4px 24px rgba(83,74,183,0.13);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--purple);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-icon svg { width: 18px; height: 18px; }
+    .logo-sub { font-size: 12px; color: var(--text-hint); font-weight: 300; margin-left: 4px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .badge-guide { font-size: 11px; background: var(--purple-light); color: var(--purple); padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+
+    /* LAYOUT */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .page-title {
+      margin-bottom: 1.5rem;
+    }
+    .page-title h1 {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .page-title p {
+      font-size: 13px;
+      color: var(--text-sec);
+      margin-top: 4px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--purple);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-title svg { width: 14px; height: 14px; opacity: 0.8; }
+
+    /* GRID */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    /* FIELDS */
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 11px; color: var(--text-sec); font-weight: 400; }
+    .field input, .field select, .field textarea {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 7px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(83,74,183,0.12);
+      background: #fff;
+    }
+    .field input[readonly] {
+      background: var(--purple-light);
+      color: var(--purple-dark);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      border-color: var(--purple-mid);
+    }
+
+    /* CHECKBOXES */
+    .cgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .ci {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all 0.12s;
+      line-height: 1.4;
+      user-select: none;
+    }
+    .ci:hover { background: var(--purple-light); border-color: var(--purple-mid); }
+    .ci input[type=checkbox] { width: 14px; height: 14px; min-width: 14px; accent-color: var(--purple); margin-top: 1px; cursor: pointer; }
+    .ci.checked { background: var(--purple-light); border-color: var(--purple-mid); color: var(--purple-dark); }
+    .nb { font-size: 9px; background: var(--purple); color: white; padding: 1px 5px; border-radius: 4px; font-weight: 500; margin-left: 3px; vertical-align: middle; }
+
+    /* FRAX PANEL */
+    .frax-toggle {
+      font-size: 12px;
+      padding: 5px 12px;
+      background: transparent;
+      border: 1px solid var(--purple-mid);
+      border-radius: var(--radius);
+      color: var(--purple);
+      cursor: pointer;
+      margin-top: 8px;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.12s;
+    }
+    .frax-toggle:hover { background: var(--purple-light); }
+    .frax-panel {
+      background: var(--purple-light);
+      border: 1px solid var(--purple-mid);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    .frax-panel.open { display: block; }
+    .frax-cards { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+    .frax-card {
+      flex: 1;
+      min-width: 110px;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .frax-card .fc-label { font-size: 10px; margin-bottom: 2px; }
+    .frax-card .fc-value { font-size: 22px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+    /* BUTTONS */
+    .btn-main {
+      width: 100%;
+      padding: 13px;
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: -0.1px;
+    }
+    .btn-main:hover { background: var(--purple-dark); }
+    .btn-main:active { transform: scale(0.99); }
+    .btn-main:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+    /* RESULT */
+    .result-wrap { display: none; margin-top: 1rem; }
+    .result-wrap.show { display: block; }
+
+    .risk-banner {
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .risk-banner .rb-left { display: flex; align-items: center; gap: 12px; }
+    .risk-banner .rb-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .risk-banner .rb-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; }
+    .risk-banner .rb-value { font-size: 20px; font-weight: 500; margin-top: 1px; }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.12s;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-sec);
+    }
+    .btn-action:hover { background: var(--bg); color: var(--text); border-color: var(--purple-mid); }
+    .btn-pdf {
+      background: var(--purple);
+      color: white;
+      border-color: var(--purple);
+    }
+    .btn-pdf:hover { background: var(--purple-dark); border-color: var(--purple-dark); color: white; }
+    .btn-pdf svg { width: 15px; height: 15px; }
+
+    .result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .result-content { font-size: 13.5px; color: var(--text); line-height: 1.7; }
+    .result-content h3 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--purple-dark);
+      margin: 1.1rem 0 0.4rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--purple-light);
+      border-radius: 6px;
+      border-left: 3px solid var(--purple);
+    }
+    .result-content h3:first-child { margin-top: 0; }
+    .result-content ul { padding-left: 1.2rem; margin: 0.3rem 0 0.5rem; }
+    .result-content li { margin-bottom: 3px; }
+    .result-content strong { font-weight: 500; color: var(--text); }
+    .result-content p { margin-bottom: 0.4rem; }
+
+    .disclaimer {
+      font-size: 11px;
+      color: var(--text-hint);
+      margin-top: 1rem;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      line-height: 1.5;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-sec);
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-hint);
+      padding: 2rem 0 1rem;
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 620px) {
+      .g3 { grid-template-columns: 1fr 1fr; }
+      .g2 { grid-template-columns: 1fr; }
+      .cgrid { grid-template-columns: 1fr; }
+      .main { padding: 1rem 1rem 3rem; }
+      .topbar { padding: 0 1rem; }
+    }
+    @media (max-width: 400px) {
+      .g3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 20V10M12 20V4M6 20v-6"/>
+      </svg>
+    </div>
+    OsteoRisk
+    <span class="logo-sub">v2.0</span>
+  </a>
+  <div class="topbar-right">
+    <span class="badge-guide">SEIOMM 2022 · IOF/ESCEO · NOF</span>
+  </div>
+</header>
+
+<main class="main">
+  <div class="page-title">
+    <h1>Riesgo de fractura por fragilidad</h1>
+    <p>Introduce los datos clínicos y analíticos del paciente para obtener estratificación de riesgo, FRAX estimado y protocolo de tratamiento. Genera un informe PDF para la historia clínica.</p>
+  </div>
+
+  <!-- DATOS GENERALES -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Datos del paciente
+    </div>
+    <div class="g3" style="margin-bottom:12px">
+      <div class="field"><label>Edad (años)</label><input type="number" id="edad" placeholder="72" min="40" max="100"></div>
+      <div class="field"><label>Sexo</label>
+        <select id="sexo"><option value="">— Seleccionar —</option><option>Mujer</option><option>Hombre</option></select>
+      </div>
+      <div class="field"><label>Peso (kg)</label><input type="number" id="peso" placeholder="62"></div>
+      <div class="field"><label>Talla (cm)</label><input type="number" id="talla" placeholder="162"></div>
+      <div class="field"><label>IMC (calculado)</label><input type="text" id="imc" readonly placeholder="—"></div>
+      <div class="field"><label>Fractura cadera en familiar 1.º grado</label>
+        <select id="fam"><option value="No">No</option><option value="Sí">Sí</option></select>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Médico responsable</label><input type="text" id="medico" placeholder="Dr./Dra. Nombre Apellidos"></div>
+      <div class="field"><label>Centro / Servicio</label><input type="text" id="centro" placeholder="Hospital · Traumatología"></div>
+    </div>
+  </div>
+
+  <!-- DXA -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Densitometría (DXA) — T-score
+    </div>
+    <div class="g3">
+      <div class="field"><label>Columna lumbar L1-L4</label><input type="number" id="tsc" placeholder="-2.8" step="0.1" min="-6" max="3"></div>
+      <div class="field"><label>Cuello femoral</label><input type="number" id="tscn" placeholder="-2.5" step="0.1" min="-6" max="3"></div>
+      <div class="field"><label>Cadera total</label><input type="number" id="tsct" placeholder="-2.3" step="0.1" min="-6" max="3"></div>
+    </div>
+  </div>
+
+  <!-- FRAX -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 16 4-8 4 6 2-4"/></svg>
+      FRAX — Probabilidad de fractura a 10 años
+    </div>
+    <div class="g2" style="margin-bottom:8px">
+      <div class="field">
+        <label>FRAX fractura mayor (%)</label>
+        <input type="number" id="fm" placeholder="Desde sheffield.ac.uk/FRAX o usa estimación ↓" step="0.1" min="0" max="100">
+      </div>
+      <div class="field">
+        <label>FRAX fractura cadera (%)</label>
+        <input type="number" id="fc" placeholder="—" step="0.1" min="0" max="100">
+      </div>
+    </div>
+    <button class="frax-toggle" onclick="toggleFrax()">
+      ƒ Estimación FRAX integrada (modelo OMS Kanis 2013)
+    </button>
+    <div class="frax-panel" id="frax-panel">
+      <p style="font-size:11.5px;color:var(--text-sec);margin-bottom:6px">
+        Estimación aproximada para población española. Para mayor precisión con DMO real visita
+        <a href="https://www.sheffield.ac.uk/FRAX/tool.aspx?country=19" target="_blank" style="color:var(--purple)">frax.sheffield.ac.uk →</a>
+      </p>
+      <div class="frax-cards" id="frax-cards">
+        <p style="font-size:12px;color:var(--text-hint)">Introduce edad y sexo para calcular...</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="frax-toggle" onclick="calcFrax()">↻ Recalcular</button>
+        <button class="frax-toggle" id="frax-use-btn" onclick="usarFrax()" disabled>✓ Usar estos valores en el análisis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALÍTICA -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      Analítica
+    </div>
+    <div class="g3">
+      <div class="field"><label>Vitamina D (ng/mL)</label><input type="number" id="vitd" placeholder="22" min="0" max="150"></div>
+      <div class="field"><label>Calcio sérico (mg/dL)</label><input type="number" id="ca" placeholder="9.2" step="0.1"></div>
+      <div class="field"><label>Fosfatasa alcalina (U/L)</label><input type="number" id="fal" placeholder="85"></div>
+      <div class="field"><label>CTX — resorción (pg/mL)</label><input type="number" id="ctx" placeholder="450"></div>
+      <div class="field"><label>P1NP — formación (ng/mL)</label><input type="number" id="p1np" placeholder="55"></div>
+      <div class="field"><label>PTH (pg/mL)</label><input type="number" id="pth" placeholder="48"></div>
+    </div>
+  </div>
+
+  <!-- FACTORES DE RIESGO -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Factores de riesgo clínicos
+    </div>
+    <div class="cgrid">
+      <label class="ci"><input type="checkbox" value="Fractura previa por fragilidad"> Fractura previa por fragilidad</label>
+      <label class="ci"><input type="checkbox" value="Fractura vertebral previa documentada"> Fractura vertebral previa</label>
+      <label class="ci"><input type="checkbox" value="Corticoterapia crónica (>3 meses, >5 mg/día prednisona)"> Corticoterapia crónica</label>
+      <label class="ci"><input type="checkbox" value="Artritis reumatoide"> Artritis reumatoide</label>
+      <label class="ci"><input type="checkbox" value="Tabaquismo activo"> Tabaquismo activo</label>
+      <label class="ci"><input type="checkbox" value="Fumador intenso: más de 20 cigarrillos por semana"> Fumador >20 cig/semana <span class="nb">+</span></label>
+      <label class="ci"><input type="checkbox" value="Consumo excesivo de alcohol (>3 unidades/día)"> Alcohol >3 uds/día</label>
+      <label class="ci"><input type="checkbox" value="Osteoporosis secundaria (hipogonadismo, malabsorción, hipertiroidismo, etc.)"> Osteoporosis secundaria</label>
+      <label class="ci"><input type="checkbox" value="Alto riesgo de caídas (>2 caídas en el último año o caída con lesión)"> Alto riesgo de caídas</label>
+      <label class="ci"><input type="checkbox" value="Menopausia precoz (antes de los 45 años)"> Menopausia precoz (&lt;45 a)</label>
+      <label class="ci"><input type="checkbox" value="Inmovilización prolongada"> Inmovilización prolongada</label>
+      <label class="ci"><input type="checkbox" value="Bajo IMC (<18.5) o pérdida de peso significativa reciente (>10% en 1 año)"> Bajo IMC / pérdida de peso <span class="nb">+</span></label>
+      <label class="ci"><input type="checkbox" value="Sedentarismo: ejercicio físico menos de 3 veces por semana"> Ejercicio &lt;3 veces/semana <span class="nb">+</span></label>
+      <label class="ci"><input type="checkbox" value="Tratamiento con estatinas (considerar efecto sobre metabolismo óseo e interacciones)"> Toma de estatinas <span class="nb">+</span></label>
+      <label class="ci"><input type="checkbox" value="Tratamiento previo antiosteoporótico (especificar fármaco y duración en notas)"> Tratamiento previo antiosteoporótico</label>
+      <label class="ci"><input type="checkbox" value="HTA o enfermedad cardiovascular establecida"> HTA / enfermedad cardiovascular</label>
+    </div>
+  </div>
+
+  <!-- NOTAS -->
+  <div class="card">
+    <div class="card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Notas clínicas adicionales
+    </div>
+    <div class="field">
+      <textarea id="notas" rows="2" placeholder="Comorbilidades relevantes, función renal (FGe), medicación concomitante, alergias, contraindicaciones específicas..."></textarea>
+    </div>
+  </div>
+
+  <button class="btn-main" id="btn" onclick="analizar()">
+    Analizar riesgo y generar protocolo de tratamiento
+  </button>
+
+  <!-- RESULTADO -->
+  <div class="result-wrap" id="result-wrap">
+    <div id="risk-banner-wrap"></div>
+    <div class="actions" id="actions-bar" style="display:none">
+      <button class="btn-action btn-pdf" onclick="generarPDF()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Descargar informe PDF
+      </button>
+      <button class="btn-action" onclick="window.print()">
+        Imprimir
+      </button>
+    </div>
+    <div class="result-card">
+      <div id="result-inner">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Analizando datos clínicos y generando protocolo...</p>
+        </div>
+      </div>
+      <div class="disclaimer" id="disc" style="display:none">
+        ⚠️ Herramienta de apoyo clínico. No sustituye el criterio del especialista. Basada en guías SEIOMM 2022, IOF/ESCEO y NOF. Revisar siempre contraindicaciones individuales y función renal antes de prescribir.
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>OsteoRisk · Herramienta de apoyo clínico para traumatología · Basada en SEIOMM 2022, IOF/ESCEO y NOF</p>
+  <p style="margin-top:4px">No sustituye el criterio del especialista. Solo para uso con datos anonimizados.</p>
+</footer>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let lastAnalysis = '', lastRiskLabel = '', lastRiskClass = '';
+  let fraxMayor = null, fraxCadera = null;
+
+  function getIMC() {
+    const p = parseFloat($('peso').value), t = parseFloat($('talla').value) / 100;
+    return (p && t) ? p / (t * t) : null;
+  }
+  function updateIMC() { const v = getIMC(); $('imc').value = v ? v.toFixed(1) : ''; }
+  $('peso').addEventListener('input', updateIMC);
+  $('talla').addEventListener('input', updateIMC);
+
+  document.querySelectorAll('.ci input').forEach(cb =>
+    cb.addEventListener('change', () => cb.closest('.ci').classList.toggle('checked', cb.checked)));
+
+  function toggleFrax() {
+    const p = $('frax-panel');
+    p.classList.toggle('open');
+    if (p.classList.contains('open')) calcFrax();
+  }
+
+  function calcFrax() {
+    const edad = parseFloat($('edad').value);
+    const sexo = $('sexo').value;
+    const imc = getIMC();
+    const ts = parseFloat($('tscn').value) || parseFloat($('tsct').value) || null;
+    const checks = Array.from(document.querySelectorAll('.ci input:checked')).map(c => c.value);
+    const has = s => checks.some(c => c.toLowerCase().includes(s));
+
+    if (!edad || !sexo) {
+      $('frax-cards').innerHTML = '<p style="font-size:12px;color:var(--text-hint)">Introduce edad y sexo para calcular.</p>';
+      return;
+    }
+
+    let b = -5.5 + 0.04*(edad-50) + (sexo==='Mujer'?0.7:0) + (imc?-0.04*(imc-25):0)
+      + (has('fractura previa')?1.1:0) + ($('fam').value==='Sí'?0.5:0)
+      + (has('tabaquis')||has('fumador')?0.35:0) + (has('cortico')?0.55:0)
+      + (has('artritis')?0.6:0) + (has('alcohol')?0.35:0)
+      + (has('secundaria')?0.3:0) + (ts?-0.35*ts:0);
+
+    let bc = -7.2 + 0.06*(edad-50) + (sexo==='Mujer'?0.4:0) + (imc?-0.05*(imc-25):0)
+      + (has('fractura previa')?0.7:0) + ($('fam').value==='Sí'?0.7:0)
+      + (has('tabaquis')||has('fumador')?0.3:0) + (has('cortico')?0.3:0)
+      + (ts?-0.45*ts:0);
+
+    fraxMayor = Math.min(95, Math.max(1, Math.round(100 / (1 + Math.exp(-b)))));
+    fraxCadera = Math.min(70, Math.max(0, Math.round(100 / (1 + Math.exp(-bc)))));
+
+    let rc='var(--amber-text)', rb='var(--amber-bg)', rl='Moderado';
+    if (fraxMayor >= 30 || fraxCadera >= 5) { rc='var(--red-text)'; rb='var(--red-bg)'; rl='Alto'; }
+    else if (fraxMayor < 10 && fraxCadera < 1) { rc='var(--green-text)'; rb='var(--green-bg)'; rl='Bajo'; }
+
+    $('frax-cards').innerHTML = `
+      <div class="frax-card" style="background:${rb}">
+        <div class="fc-label" style="color:${rc}">Fractura mayor (10 años)</div>
+        <div class="fc-value" style="color:${rc}">${fraxMayor}%</div>
+      </div>
+      <div class="frax-card" style="background:${rb}">
+        <div class="fc-label" style="color:${rc}">Fractura cadera (10 años)</div>
+        <div class="fc-value" style="color:${rc}">${fraxCadera}%</div>
+      </div>
+      <div class="frax-card" style="background:#fff">
+        <div class="fc-label" style="color:var(--text-sec)">Riesgo estimado</div>
+        <div class="fc-value" style="font-size:16px;color:${rc}">${rl}</div>
+      </div>`;
+    $('frax-use-btn').disabled = false;
+  }
+
+  function usarFrax() {
+    if (fraxMayor !== null) { $('fm').value = fraxMayor; $('fc').value = fraxCadera; }
+    $('frax-panel').classList.remove('open');
+  }
+
+  async function analizar() {
+    if (!$('edad').value || !$('sexo').value) {
+      alert('Por favor, introduce al menos la edad y el sexo del paciente.');
+      return;
+    }
+    $('btn').disabled = true;
+    $('result-wrap').classList.add('show');
+    $('risk-banner-wrap').innerHTML = '';
+    $('actions-bar').style.display = 'none';
+    $('disc').style.display = 'none';
+    $('result-inner').innerHTML = '<div class="loading"><div class="spinner"></div><p>Analizando datos clínicos y generando protocolo...</p></div>';
+    $('result-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const imc = getIMC();
+    const factores = Array.from(document.querySelectorAll('.ci input:checked')).map(c => c.value);
+    const d = {
+      edad: $('edad').value, sexo: $('sexo').value, peso: $('peso').value,
+      talla: $('talla').value, imc: imc ? imc.toFixed(1) : 'nd',
+      fam: $('fam').value, tsc: $('tsc').value, tscn: $('tscn').value, tsct: $('tsct').value,
+      vitd: $('vitd').value, ca: $('ca').value, fal: $('fal').value,
+      ctx: $('ctx').value, p1np: $('p1np').value, pth: $('pth').value,
+      fm: $('fm').value, fc: $('fc').value, factores, notas: $('notas').value
+    };
+
+    const prompt = `Eres un experto en metabolismo óseo. Analiza los datos de este paciente y responde EXCLUSIVAMENTE con estas secciones en español, formato markdown, conciso y orientado al especialista:
+
+### 1. Diagnóstico densitométrico
+Clasificación OMS. T-score peor y localización.
+
+### 2. Estratificación de riesgo
+Riesgo: BAJO / MODERADO / ALTO / MUY ALTO. Justificación en 2-3 líneas. Probabilidad estimada a 10 años por tipo de fractura (vertebral, cadera, baja energía).
+
+### 3. Alertas clínicas
+Hallazgos analíticos o clínicos que requieren atención (secundarismo, hiperparatiroidismo, osteomalacia, mieloma, etc.). Si no hay: "Sin alertas relevantes."
+
+### 4. Protocolo de tratamiento
+**Suplementación base:** vitamina D (dosis y forma según nivel), calcio si precisa.
+**Primera línea:** fármaco, dosis, vía, frecuencia, duración. Justificación breve.
+**Alternativas:** 2-3 opciones con indicación.
+**Tratamiento anabólico/secuencial:** indicar si aplica teriparatida, romosozumab o secuencia denosumab→bifosfonato.
+
+### 5. Monitorización
+DXA: cuándo repetir. Analítica de control: qué y cuándo. Objetivo de marcadores de recambio óseo.
+
+### 6. Medidas no farmacológicas
+Tipo de ejercicio específico, prevención de caídas, dieta. Sé concreto.
+
+---
+Paciente: ${d.edad}a, ${d.sexo}, ${d.peso}kg, ${d.talla}cm, IMC ${d.imc}. Familiar cadera: ${d.fam}.
+DXA: columna ${d.tsc||'nd'}, cuello femoral ${d.tscn||'nd'}, cadera total ${d.tsct||'nd'}.
+Analítica: VitD ${d.vitd||'nd'} ng/mL, Ca ${d.ca||'nd'} mg/dL, FA ${d.fal||'nd'} U/L, CTX ${d.ctx||'nd'} pg/mL, P1NP ${d.p1np||'nd'} ng/mL, PTH ${d.pth||'nd'} pg/mL.
+FRAX: fractura mayor ${d.fm||'nd'}%, cadera ${d.fc||'nd'}%.
+Factores: ${d.factores.length ? d.factores.join('; ') : 'ninguno'}.
+Notas: ${d.notas || 'ninguna'}.`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1800,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await resp.json();
+      const text = data.content?.map(b => b.text || '').join('') || 'Error al obtener respuesta.';
+      lastAnalysis = text;
+
+      const html = text
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>[^]*?<\/li>(\n|$))+/g, m => '<ul>' + m + '</ul>')
+        .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+
+      const tl = text.toLowerCase();
+      let rLabel = 'Riesgo moderado', rClass = 'rm', rBg = 'var(--amber-bg)', rText = 'var(--amber-text)';
+      if (tl.match(/riesgo[:\s]+muy alto|muy alto/)) { rLabel='Riesgo muy alto'; rClass='rvh'; rBg='var(--redark-bg)'; rText='var(--redark-text)'; }
+      else if (tl.match(/riesgo[:\s]+alto\b|alto riesgo/)) { rLabel='Riesgo alto'; rClass='rh'; rBg='var(--red-bg)'; rText='var(--red-text)'; }
+      else if (tl.match(/riesgo[:\s]+bajo\b|bajo riesgo/)) { rLabel='Riesgo bajo'; rClass='rl'; rBg='var(--green-bg)'; rText='var(--green-text)'; }
+      lastRiskLabel = rLabel; lastRiskClass = rClass;
+
+      $('risk-banner-wrap').innerHTML = `
+        <div class="risk-banner" style="background:${rBg}">
+          <div class="rb-left">
+            <div class="rb-icon" style="background:${rText}20">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${rText}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="rb-label" style="color:${rText}">Estratificación de riesgo</div>
+              <div class="rb-value" style="color:${rText}">${rLabel}</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:${rText};opacity:0.7">Basado en SEIOMM 2022 · IOF/ESCEO</div>
+        </div>`;
+
+      $('result-inner').innerHTML = `<div class="result-content">${html}</div>`;
+      $('actions-bar').style.display = 'flex';
+      $('disc').style.display = 'block';
+    } catch (e) {
+      $('result-inner').innerHTML = '<p style="color:var(--red-text);padding:1rem 0">Error al conectar con el servicio. Comprueba la clave de API y vuelve a intentarlo.</p>';
+    }
+    $('btn').disabled = false;
+  }
+
+  function generarPDF() {
+    if (!lastAnalysis) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    const W = 210, ml = 18, mr = 18, cw = W - ml - mr;
+    let y = 0;
+
+    const checkY = (h = 10) => { if (y + h > 275) { doc.addPage(); y = 20; } };
+
+    const hex2rgb = h => {
+      if (h.startsWith('var')) return [83,74,183];
+      const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
+      return [r,g,b];
+    };
+
+    const riskCols = {
+      rl: { bg:'#EAF3DE', text:'#3B6D11' },
+      rm: { bg:'#FAEEDA', text:'#854F0B' },
+      rh: { bg:'#FCEBEB', text:'#A32D2D' },
+      rvh:{ bg:'#F7C1C1', text:'#501313' }
+    };
+
+    // HEADER
+    doc.setFillColor(83,74,183);
+    doc.rect(0, 0, W, 30, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('OsteoRisk — Informe de fractura por fragilidad', ml, 13);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('Herramienta de apoyo clínico · SEIOMM 2022 · IOF/ESCEO · NOF', ml, 19);
+    const fecha = new Date().toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'numeric'});
+    doc.text(`Generado el ${fecha}`, ml, 24.5);
+    const med = $('medico').value, cen = $('centro').value;
+    if (med || cen) doc.text([med, cen].filter(Boolean).join('  ·  '), W-mr, 24.5, {align:'right'});
+    y = 38;
+
+    // RIESGO BANNER
+    const rc = riskCols[lastRiskClass] || riskCols.rm;
+    const [br,bg2,bb] = hex2rgb(rc.bg); const [tr,tg,tb] = hex2rgb(rc.text);
+    doc.setFillColor(br,bg2,bb);
+    doc.roundedRect(ml, y, cw, 13, 3, 3, 'F');
+    doc.setTextColor(tr,tg,tb);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text(lastRiskLabel.toUpperCase(), W/2, y+8.5, {align:'center'});
+    y += 19;
+
+    // DATOS PACIENTE
+    doc.setFillColor(245,244,254);
+    doc.roundedRect(ml, y, cw, 32, 3, 3, 'F');
+    doc.setTextColor(83,74,183); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.text('DATOS DEL PACIENTE', ml+4, y+6);
+    doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8.5);
+    const imc = $('imc').value;
+    const col1 = [`Edad: ${$('edad').value||'—'} años`, `Sexo: ${$('sexo').value||'—'}`, `Peso: ${$('peso').value||'—'} kg`];
+    const col2 = [`Talla: ${$('talla').value||'—'} cm`, `IMC: ${imc||'—'} kg/m²`, `Antec. familiar cadera: ${$('fam').value}`];
+    col1.forEach((t,i) => doc.text(t, ml+4, y+13+i*6));
+    col2.forEach((t,i) => doc.text(t, ml+cw/2+4, y+13+i*6));
+    y += 38;
+
+    // DXA + ANALÍTICA + FRAX
+    const colW = (cw-8)/3;
+    const drawBlock = (title, items, x, bw, yy) => {
+      doc.setFillColor(248,248,250);
+      doc.roundedRect(x, yy, bw, 8+items.length*5.5, 2, 2, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(83,74,183);
+      doc.text(title, x+3, yy+5.5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+      items.forEach((t,i) => doc.text(t, x+3, yy+11+i*5.5));
+      return yy + 8 + items.length*5.5 + 3;
+    };
+
+    const dxa = [`Columna L1-L4: ${$('tsc').value||'—'}`, `Cuello femoral: ${$('tscn').value||'—'}`, `Cadera total: ${$('tsct').value||'—'}`];
+    const anal = [`VitD: ${$('vitd').value||'—'} ng/mL`, `Calcio: ${$('ca').value||'—'} mg/dL`, `FA: ${$('fal').value||'—'} U/L`, `CTX: ${$('ctx').value||'—'} pg/mL`, `P1NP: ${$('p1np').value||'—'} ng/mL`, `PTH: ${$('pth').value||'—'} pg/mL`];
+    const fraxD = [`Fractura mayor: ${$('fm').value||'—'}%`, `Cadera: ${$('fc').value||'—'}%`];
+
+    drawBlock('DXA (T-score)', dxa, ml, colW, y);
+    drawBlock('Analítica', anal, ml+colW+4, colW, y);
+    const y2 = drawBlock('FRAX 10 años', fraxD, ml+2*(colW+4), colW, y);
+    y = y2 + 2;
+
+    // FACTORES
+    const factores = Array.from(document.querySelectorAll('.ci input:checked')).map(c => c.value);
+    if (factores.length) {
+      checkY(20);
+      const rows = Math.ceil(factores.length/2);
+      doc.setFillColor(248,248,250);
+      doc.roundedRect(ml, y, cw, 8+rows*5.5, 2, 2, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(83,74,183);
+      doc.text('FACTORES DE RIESGO', ml+3, y+5.5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8);
+      factores.forEach((f,i) => {
+        const col = i%2, row = Math.floor(i/2);
+        doc.text('• '+f, ml+3+col*(cw/2), y+11+row*5.5, {maxWidth: cw/2-4});
+      });
+      y += 8+rows*5.5+4;
+    }
+
+    // ANÁLISIS
+    checkY(12);
+    doc.setDrawColor(83,74,183); doc.setLineWidth(0.4);
+    doc.line(ml, y, ml+cw, y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(30,30,30);
+    doc.text('Análisis clínico y protocolo de tratamiento', ml, y+8);
+    y += 14;
+
+    const lines = lastAnalysis.split('\n');
+    lines.forEach(line => {
+      if (!line.trim()) { y += 2; return; }
+      checkY(8);
+
+      if (line.startsWith('### ')) {
+        y += 2;
+        const title = line.replace(/^### /,'').trim();
+        doc.setFillColor(83,74,183);
+        doc.rect(ml, y, 3, 7, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(30,30,30);
+        doc.text(title, ml+6, y+5);
+        y += 11;
+      } else if (line.match(/^\*\*(.+)\*\*/)) {
+        const t = line.replace(/\*\*/g,'').trim();
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
+        const wrapped = doc.splitTextToSize(t, cw);
+        wrapped.forEach(wl => { checkY(5); doc.text(wl, ml, y); y+=5.5; });
+      } else if (line.match(/^[-•] /)) {
+        const t = line.replace(/^[-•] /,'').replace(/\*\*/g,'').trim();
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+        const wrapped = doc.splitTextToSize(t, cw-6);
+        wrapped.forEach((wl,wi) => {
+          checkY(5);
+          if (wi===0) { doc.text('•', ml+1.5, y); doc.text(wl, ml+6, y); }
+          else doc.text(wl, ml+6, y);
+          y += 5.5;
+        });
+      } else {
+        const clean = line.replace(/\*\*/g,'').trim();
+        if (!clean) return;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+        const wrapped = doc.splitTextToSize(clean, cw);
+        wrapped.forEach(wl => { checkY(5); doc.text(wl, ml, y); y += 5.5; });
+      }
+    });
+
+    // NOTAS
+    const notas = $('notas').value;
+    if (notas) {
+      checkY(18); y += 4;
+      const nw = doc.splitTextToSize(notas, cw-6);
+      doc.setFillColor(248,248,250);
+      doc.roundedRect(ml, y, cw, 8+nw.length*5.5, 2, 2, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(83,74,183);
+      doc.text('NOTAS CLÍNICAS', ml+3, y+5.5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8);
+      nw.forEach((l,i) => doc.text(l, ml+3, y+11+i*5.5));
+    }
+
+    // PIES DE PÁGINA
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+      doc.line(ml, 284, W-mr, 284);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160,160,160);
+      doc.text('OsteoRisk · Herramienta de apoyo clínico · No sustituye el criterio del especialista · SEIOMM 2022 / IOF-ESCEO / NOF', ml, 289);
+      doc.text(`Página ${i} / ${totalPages}`, W-mr, 289, {align:'right'});
+    }
+
+    const fechaFile = new Date().toISOString().slice(0,10);
+    doc.save(`osteoporosis_informe_${fechaFile}.pdf`);
+  }
+</script>
+</body>
+</html>
